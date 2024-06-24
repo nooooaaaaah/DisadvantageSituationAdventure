@@ -1,3 +1,3 @@
-module gitub.com/nooooaaaaah/DisadvantageSituationAdventure/tree/main/compression/huffman
+module gitub.com/nooooaaaaah/DisadvantageSituationAdventure/compression/huffman
 
 go 1.22.1

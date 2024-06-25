@@ -8,7 +8,7 @@ import (
 	"unicode"
 )
 
-func compress(data string) string {
+func Compress(data string) string {
 	var buffer bytes.Buffer
 	prevChar := rune(data[0])
 	count := 1
@@ -28,7 +28,7 @@ func compress(data string) string {
 }
 
 // Note: When converting a rune/byte to int convert to string first
-func decompress(data string) string {
+func Decompress(data string) string {
 	var buffer bytes.Buffer
 	prevChar := rune(data[0])
 
@@ -49,8 +49,8 @@ func decompress(data string) string {
 
 func main() {
 	input := "aaaabbbccddddd"
-	compressed := compress(input)
-	decompressed := decompress(compressed)
+	compressed := Compress(input)
+	decompressed := Decompress(compressed)
 	fmt.Println("Original:", input)
 	fmt.Println("Compressed:", compressed)
 	fmt.Println("Decompressed:", decompressed)

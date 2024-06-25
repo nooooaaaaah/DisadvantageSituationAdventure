@@ -1,9 +1,7 @@
 package huffman
 
 import (
-	"fmt"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -45,43 +43,18 @@ func TestCreateQueue(t *testing.T) {
 			wantErr: false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var q Queue
 			err := q.CreateQueue(tt.nodes)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("createQueue() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("CreateQueue() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(q, tt.want) {
-				t.Errorf("createQueue() got = %v, want %v", q, tt.want)
+				t.Errorf("CreateQueue() got = %v, want %v", q, tt.want)
 			}
 		})
-	}
-}
-
-func TestGetSymbolFreq(t *testing.T) {
-	tests := []struct {
-		data    string
-		want    map[Value]SymbolFreq
-		wantErr bool
-	}{
-		{"aaaabbc", map[Value]SymbolFreq{'a': 4, 'b': 2, 'c': 1}, false},
-		{"", nil, true},
-		{"cccccc", map[Value]SymbolFreq{'c': 6}, false},
-		{"ab", map[Value]SymbolFreq{'a': 1, 'b': 1}, false},
-	}
-
-	for _, tt := range tests {
-		got, err := GetSymbolFreq(tt.data)
-		if (err != nil) != tt.wantErr {
-			t.Errorf("getSymbolFreq(%q) error = %v, wantErr %v", tt.data, err, tt.wantErr)
-			continue
-		}
-		if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
-			t.Errorf("getSymbolFreq(%q) = %v, want %v", tt.data, got, tt.want)
-		}
 	}
 }
 
@@ -107,17 +80,17 @@ func TestMakeTree(t *testing.T) {
 			wantErr: true,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var tr Tree
-			err := tr.makeTree(&tt.nodes)
+			err := tr.MakeTree(&tt.nodes)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("makeTree() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("MakeTree() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 			// Optionally check the structure of the tree
 			if !tt.wantErr && len(tr.Nodes) < 2 {
-				t.Errorf("makeTree() resulted in an incorrect tree size = %v, want at least 2", len(tr.Nodes))
+				t.Errorf("MakeTree() resulted in an incorrect tree size = %v, want at least 2", len(tr.Nodes))
 			}
 		})
 	}
@@ -133,7 +106,7 @@ func TestAssignBinaryPrefixes(t *testing.T) {
 	}
 	tr.AssignBinaryPrefixes(0, "")
 	if tr.Nodes[1].binPrefix != "0" || tr.Nodes[2].binPrefix != "1" {
-		t.Errorf("assignBinaryPrefixes() failed to assign correct prefixes, got = %v, %v", tr.Nodes[1].binPrefix, tr.Nodes[2].binPrefix)
+		t.Errorf("AssignBinaryPrefixes() failed to assign correct prefixes, got = %v, %v", tr.Nodes[1].binPrefix, tr.Nodes[2].binPrefix)
 	}
 }
 
@@ -145,11 +118,67 @@ func TestEncodedMessage(t *testing.T) {
 			{leaf: true, freq: 2, value: 'b', binPrefix: "1", left: -1, right: -1},
 		},
 	}
-	var output strings.Builder
-	fmt.Fprintf(&output, "Encoded message as binary value: %s", "01")
-	expected := output.String()
-
+	expected := "Encoded message as binary value: 01"
 	if result := tr.EncodedMessage("ab"); result != expected {
-		t.Errorf("encodedMessage() = %v, want %v", result, expected)
+		t.Errorf("EncodedMessage() = %v, want %v", result, expected)
+	}
+}
+
+func TestGetSymbolFreq(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   interface{}
+		want    map[Value]SymbolFreq
+		wantErr bool
+	}{
+		{
+			name:  "string input",
+			input: "abba",
+			want: map[Value]SymbolFreq{
+				'a': 2,
+				'b': 2,
+			},
+			wantErr: false,
+		},
+		{
+			name:  "byte slice input",
+			input: []byte("abba"),
+			want: map[Value]SymbolFreq{
+				byte('a'): 2,
+				byte('b'): 2,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "empty string",
+			input:   "",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "empty byte slice",
+			input:   []byte{},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "unsupported type",
+			input:   123,
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetSymbolFreq(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetSymbolFreq() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetSymbolFreq() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

@@ -1,7 +1,9 @@
 package huffman
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 )
@@ -20,7 +22,7 @@ type Node struct {
 }
 
 type (
-	Value      rune
+	Value      any
 	SymbolFreq int
 	Queue      []Node
 )
@@ -34,24 +36,39 @@ func (q *Queue) CreateQueue(nodes map[Value]SymbolFreq) error {
 		sortedNodes = append(sortedNodes, Node{value: val, freq: freq, leaf: true, left: -1, right: -1})
 	}
 	sort.Slice(sortedNodes, func(i, j int) bool {
+		if sortedNodes[i].freq == sortedNodes[j].freq {
+			return fmt.Sprintf("%v", sortedNodes[i].value) < fmt.Sprintf("%v", sortedNodes[j].value)
+		}
 		return sortedNodes[i].freq < sortedNodes[j].freq
 	})
 	*q = sortedNodes
 	return nil
 }
 
-func GetSymbolFreq(data string) (map[Value]SymbolFreq, error) {
-	if data == "" {
-		return nil, fmt.Errorf("data was empty")
-	}
+func GetSymbolFreq(data any) (map[Value]SymbolFreq, error) {
 	freqMap := make(map[Value]SymbolFreq)
-	for _, char := range data {
-		freqMap[Value(char)]++
+	switch v := data.(type) {
+	case string:
+		if v == "" {
+			return nil, fmt.Errorf("data was empty")
+		}
+		for _, char := range v {
+			freqMap[char]++
+		}
+	case []byte:
+		if len(v) == 0 {
+			return nil, fmt.Errorf("data was empty")
+		}
+		for _, b := range v {
+			freqMap[b]++
+		}
+	default:
+		return nil, fmt.Errorf("unsupported data type")
 	}
 	return freqMap, nil
 }
 
-func (t *Tree) makeTree(pq *Queue) error {
+func (t *Tree) MakeTree(pq *Queue) error {
 	if len(*pq) < 2 {
 		return fmt.Errorf("not enough nodes to make a tree")
 	}
@@ -85,8 +102,17 @@ func (t *Tree) AssignBinaryPrefixes(index int, binPrefix string) {
 	}
 	node := &t.Nodes[index]
 	node.binPrefix = binPrefix
-	if node.value != 0 {
-		fmt.Printf("Assigning prefix %s to node with freq %d and value of %c \n", binPrefix, node.freq, rune(node.value))
+	if node.leaf {
+		var valueStr string
+		switch v := node.value.(type) {
+		case byte:
+			valueStr = fmt.Sprintf("'%c'", v)
+		case rune:
+			valueStr = fmt.Sprintf("'%c'", v)
+		default:
+			valueStr = fmt.Sprintf("%v", v)
+		}
+		fmt.Printf("Assigning prefix %s to node with freq %d and value of %s\n", binPrefix, node.freq, valueStr)
 	}
 	if node.left != -1 {
 		t.AssignBinaryPrefixes(node.left, binPrefix+"0")
@@ -98,7 +124,7 @@ func (t *Tree) AssignBinaryPrefixes(index int, binPrefix string) {
 
 func (t *Tree) PrintTree() error {
 	fmt.Println(strings.Repeat("-", 50))
-	fmt.Print("\nHeres a visual representation of the tree\n\n")
+	fmt.Print("\nHere's a visual representation of the tree\n\n")
 	if len(t.Nodes) == 0 {
 		return fmt.Errorf("tree is empty")
 	}
@@ -109,7 +135,16 @@ func (t *Tree) PrintTree() error {
 		}
 		node := t.Nodes[index]
 		if node.leaf {
-			fmt.Printf("%s└── %s (%c, %d)\n", prefix, node.binPrefix, rune(node.value), node.freq)
+			var valueStr string
+			switch v := node.value.(type) {
+			case byte:
+				valueStr = fmt.Sprintf("'%c'", v)
+			case rune:
+				valueStr = fmt.Sprintf("'%c'", v)
+			default:
+				valueStr = fmt.Sprintf("%v", v)
+			}
+			fmt.Printf("%s└── %s (%s, %d)\n", prefix, node.binPrefix, valueStr, node.freq)
 		} else {
 			fmt.Printf("%s├── %s node (%d)\n", prefix, node.binPrefix, node.freq)
 			newPrefix := prefix + "│   "
@@ -119,56 +154,78 @@ func (t *Tree) PrintTree() error {
 			}
 		}
 	}
-	printNode(len(t.Nodes)-1, "") // Start printing from the root
+	printNode(len(t.Nodes)-1, "")
 	return nil
 }
 
-func (t *Tree) EncodedMessage(input string) string {
+func (t *Tree) EncodedMessage(input any) string {
 	var binaryString string
-	encodingMap := make(map[rune]string)
+	encodingMap := make(map[Value]string)
 	for _, n := range t.Nodes {
 		if n.leaf {
-			encodingMap[rune(n.value)] = n.binPrefix
+			encodingMap[n.value] = n.binPrefix
 		}
 	}
-	for _, char := range input {
-		binaryString += encodingMap[char]
+	switch v := input.(type) {
+	case []byte:
+		for _, b := range v {
+			binaryString += encodingMap[b]
+		}
+	case string:
+		for _, char := range v {
+			binaryString += encodingMap[char]
+		}
+	default:
+		return "Unsupported input type"
 	}
-	return fmt.Sprint("Encoded message as binary value: ", binaryString)
+	return fmt.Sprintf("Encoded message as binary value: %s", binaryString)
 }
 
 func main() {
-	var input string
-	fmt.Println("Enter the text to encode:")
-	fmt.Scanln(&input)
+	reader := bufio.NewReader(os.Stdin)
 
-	freqMap, err := GetSymbolFreq(input)
+	fmt.Println("Enter the text to encode:")
+	input, err := reader.ReadString('\n')
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error reading input:", err)
+		return
+	}
+	input = strings.TrimSpace(input)
+
+	// String encoding
+	fmt.Println("Encoding as string:")
+	encodeData(input)
+
+	// Byte slice encoding
+	fmt.Println("\nNow encoding the same input as a byte slice:")
+	encodeData([]byte(input))
+}
+
+func encodeData(data any) {
+	freqMap, err := GetSymbolFreq(data)
+	if err != nil {
+		fmt.Println("Error getting symbol frequencies:", err)
 		return
 	}
 
 	var pq Queue
-	err = pq.CreateQueue(freqMap)
-	if err != nil {
-		fmt.Println(err)
+	if err := pq.CreateQueue(freqMap); err != nil {
+		fmt.Println("Error creating queue:", err)
 		return
 	}
 
 	var huffTree Tree
-	err = huffTree.makeTree(&pq)
-	if err != nil {
-		fmt.Println(err)
+	if err := huffTree.MakeTree(&pq); err != nil {
+		fmt.Println("Error making tree:", err)
 		return
 	}
 
 	huffTree.AssignBinaryPrefixes(len(huffTree.Nodes)-1, "")
 
-	err = huffTree.PrintTree()
-	if err != nil {
-		fmt.Println(err)
+	if err := huffTree.PrintTree(); err != nil {
+		fmt.Println("Error printing tree:", err)
 		return
 	}
 
-	fmt.Println(huffTree.EncodedMessage(input))
+	fmt.Println(huffTree.EncodedMessage(data))
 }

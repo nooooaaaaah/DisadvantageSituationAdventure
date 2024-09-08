@@ -6,6 +6,8 @@ Feel free to use these as packages for simple compression.
 
 ```bash
 go add https://github.com/nooooaaaaah/DisadvantageSituationAdventure/tree/main/compression/huffman
+```
 or
+```bash
 go add https://github.com/nooooaaaaah/DisadvantageSituationAdventure/tree/main/compression/rle
 ```
